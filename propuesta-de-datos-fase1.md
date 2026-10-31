@@ -3,7 +3,7 @@
 | Campo | Detalle |
 | --- | --- |
 | Título del proyecto | **Centinela de Hurtos** · Línea base tabular (MLP) de alerta temprana del riesgo de hurto a personas por municipio y mes |
-| Integrantes | Yeison David Toro — Juan Sebastián Ulloa |
+| Integrantes | Yeison David Toro — Juan Sebastian Ulloa |
 | Fecha | 2026-10-29 |
 | Versión | v1 (Fase 1) |
 
@@ -31,7 +31,7 @@ Uso de  registro  de hurtos a personas de la Policía Nacional (por municipio y 
 
 | Modalidad | Fuente (productor primario) | Enlace o DOI | Licencia y versión | Dónde se verificó la licencia | ¿Datos de personas? |
 | --- | --- | --- | --- | --- | --- |
-| Temporal (principal) | **Policía Nacional — DIJIN/SIEDCO**: *Reporte Hurto por Modalidades*. El proyecto usa **solo la modalidad «HURTO A PERSONAS»** del conjunto | Portal oficial: https://portalsiedco.policia.gov.co:4443/extensions/PortalPublico/index.html#/Indicadores/Delito · copia oficial en datos abiertos: https://www.datos.gov.co/resource/d4fr-sbn2.json (ID `d4fr-sbn2`) | **CC BY-SA 4.0** (libre con atribución a la Policía) | Licencia visible en los metadatos del conjunto en datos.gov.co (API `api/views/d4fr-sbn2.json`) y en las notas del portal SIEDCO | **No** (hechos anonimizados, sin nombres ni documentos) |
+| Temporal (principal) | **Policía Nacional — DIJIN/SIEDCO**: *Reporte Hurto por Modalidades*. El proyecto usa **solo la modalidad «HURTO A PERSONAS»** del conjunto | Portal oficial: https://portalsiedco.policia.gov.co:4443/extensions/PortalPublico/index.html#/Indicadores/Delito  **CC BY-SA 4.0** (libre con atribución a la Policía) | Licencia visible en los metadatos del conjunto en datos.gov.co (API `api/views/d4fr-sbn2.json`) y en las notas del portal SIEDCO | **No** (hechos anonimizados, sin nombres ni documentos) |
 | Temporal (contexto) | **DANE** — proyecciones de población por municipio (es el denominator de la tasa) | https://www.dane.gov.co/index.php/estadisticas-por-tema/demografia-y-poblacion | Dato oficial público (uso estadístico) | Sitio DANE | **No** (cifras por municipio) |
 | Temporal (contexto) | **DNP** — municipios PDET y ZOMAC · **DANE** — PIB departamental | PDET: https://www.datos.gov.co/resource/idrk-ba8y · ZOMAC y PIB: portales DNP y DANE | Datos abiertos oficiales (Ley 1712 de 2014) | Ficha de cada conjunto + portal del productor | **No** (cifras por municipio) |
 | Imagen | **NASA Black Marble (VIIRS)** — compuestos **mensuales** de luces nocturnas (VNP46A3) | https://blackmarble.gsfc.nasa.gov/ · descarga: https://ladsweb.modaps.eosdis.nasa.gov/ | Datos NASA de libre uso (registro gratuito en Earthdata) | Página del producto en LADS | **No** (fotos satelitales de luz) |
