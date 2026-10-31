@@ -1,0 +1,8 @@
+.venv/
+__pycache__/
+*.egg-info/
+.ipynb_checkpoints/
+data/
+*.rzpt/
+01_lab_fundamentos_modulo_1.ipynb
+02_scaffold_centinela_fase1.ipynb
