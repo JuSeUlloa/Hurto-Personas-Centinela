@@ -13,9 +13,9 @@ Universidad Santo Tomás · Maestría en Ciencia de Datos
 | --- | --- |
 | **Evento binario** | Municipio–mes en **alerta de repunte del hurto a personas**: la tasa de hurtos a personas por 100.000 habitantes supera el **P75 del histórico del propio municipio** (con *shrinkage* para municipios con pocos meses observados). |
 | **Cliente** | Gobernaciones / alcaldías (seguridad ciudadana): dónde anticipar el repunte para dirigir vigilancia y prevención. |
-| **Rama de serie (Fase 1, aplanada a tabla)** | Panel municipal-mensual 2021–2026: tasas + rezagos + medias móviles (calculadas sin mirar el futuro) + contexto estructural (población DANE, PDET, ZOMAC, PIB departamental). |
+| **Rama de serie (Fase 1, aplanada a tabla)** | Panel municipal-mensual de la ventana publicada por la API (2021 + ene–feb 2022): tasas + rezagos + medias móviles (calculadas sin mirar el futuro) + población DANE. |
 | **Rama de imagen (Fase 2)** | Luces nocturnas **NASA Black Marble VIIRS** (VNP46A3 mensual, 500 m) recortadas por polígono municipal. |
-| **Partición** | Cronológica (obligatoria al aplanar una serie): train 2021–2023 · validación 2024 · prueba 2025–2026. |
+| **Partición** | Cronológica (obligatoria al aplanar una serie), ajustada a la ventana publicada por la API: **train 2021 · validación ene-2022 · prueba feb-2022**. |
 | **Línea base comprometida** | Clase mayoritaria (exactitud + recall de la clase de alerta) y **escalar crudo** (tasa t−1 sola con umbral en validación). |
 | **Semilla** | 42 |
 
@@ -25,7 +25,7 @@ El dataset donde trabaja este proyecto **ya existe en un modelo de datos** — e
 
 | Fuente | Rol | Enlace / API | Licencia |
 | --- | --- | --- | --- |
-| Policía Nacional DIJIN/SIEDCO · *Reporte Hurto por Modalidades* (**foco: solo «HURTO A PERSONAS»**) | Serie principal de eventos (735.802 registros 2021–2025 + 83.778 de 2026, filtrados por la modalidad) | Portal oficial: https://portalsiedco.policia.gov.co:4443/extensions/PortalPublico/index.html#/Indicadores/Delito 
+| Policía Nacional DIJIN/SIEDCO · **«HURTO A PERSONAS»** | Serie principal de eventos — **ventana publicada por la API: 330.374 eventos** (179.594 filas agregadas; 2021 + ene–feb 2022) | Portal oficial: https://portalsiedco.policia.gov.co:4443/extensions/PortalPublico/index.html#/Indicadores/Delito · API del proyecto: `…/api/dbx/bronze` |
 | DANE · Proyecciones de población por municipio | Denominador de la tasa (`pob_dane`) | https://www.dane.gov.co/index.php/estadisticas-por-tema/demografia-y-poblacion | Datos oficiales |
 | DNP · PDET / ZOMAC · DANE PIB departamental | Contexto estructural del consolidado | PDET: https://www.datos.gov.co/resource/idrk-ba8y | Datos abiertos |
 | NASA Black Marble VNP46A3 (VIIRS) | Rama de imagen (Fase 2 + prueba de acoplamiento) | https://ladsweb.modaps.eosdis.nasa.gov/ | Datos NASA de libre uso (registro Earthdata gratuito) |
@@ -34,7 +34,7 @@ El dataset donde trabaja este proyecto **ya existe en un modelo de datos** — e
 
 ## Propuesta de Datos · compuerta del Paso 0
 
-- Documento completo: [`propuesta-de-datos-fase1.md`](./propuesta-de-datos-fase1.md) — secciones 0–8 + anexos (A · prueba de acoplamiento con 10 filas reales; B · test de procedencia con SHA-256 calculadas sobre los parquet del proyecto; C · checklist Ley 1581 por fuente).
+- Documento completo: [`propuesta-de-datos-fase1.md`](./propuesta-de-datos-fase1.md) — secciones 0–8 + anexos (A · prueba de acoplamiento con 10 pares reales de la ventana API; B · test de procedencia con huellas SHA-256 de las descargas del API; C · checklist Ley 1581 por fuente).
 - Fuentes públicas no-Kaggle con licencia citable · objetivo binario justificado · clave `(código DANE, año-mes)` por muestra · línea base comprometida · **sin datos de personas** (checklist trivial).
 
 
@@ -47,7 +47,7 @@ El dataset donde trabaja este proyecto **ya existe en un modelo de datos** — e
 
 - Solo datos públicos/agregados de fuente oficial — sin personas identificables (checklist por fuente en el anexo C de la propuesta).
 - **A los asistentes de IA no se pegan registros reales con datos personales** (filas sintéticas/esquemas solo).
-- Riesgos cubiertos: sesgo de denuncias (subregistro), **cobertura incompleta de la sabana** (2024: ≈ 55 % del grid anual, solo ≈ 19 % de municipios con los 12 meses; 2026 —año parcial hasta septiembre—: ≈ 48 % y ≈ 17 %; ausencia de registro ≠ ausencia de hurto), estigma territorial por falsas alarmas, daño por alarmas omitidas — con mitigación cada uno.
+- Riesgos cubiertos: sesgo de denuncias (subregistro), **cobertura incompleta de la sabana** (en 2021 apenas 24 % de los municipios con los 12 meses; ausencia de registro ≠ ausencia de hurto), estigma territorial por falsas alarmas, daño por alarmas omitidas — con mitigación cada uno.
 
 ## Ecosistema del proyecto
 
