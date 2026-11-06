@@ -1,0 +1,3 @@
+# ABLACIÓN · semilla 42 · 50 épocas · lr=0.01 · misma partición
+8 features (con sin/cos)  · TEST acc 0.77 prec 0.50 rec 0.02 (tn,fp,fn,tp)=(264,2,79,2)
+6 features (sin sin/cos)  · TEST acc 0.62 prec 0.28 rec 0.42 (tn,fp,fn,tp)=(180,86,47,34)
