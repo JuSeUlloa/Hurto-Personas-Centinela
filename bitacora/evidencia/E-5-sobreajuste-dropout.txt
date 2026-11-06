@@ -1,0 +1,4 @@
+# Sobreajuste 200 muestras · 128×3 · 300 épocas · lr=0.01 · semilla 42
+SIN reg   train(200) acc 0.94 prec 0.80 rec 0.98 (tn,fp,fn,tp)=(140,12,1,47) · val acc 0.56 prec 0.27 rec 0.26 (tn,fp,fn,tp)=(175,77,82,29) · val_loss_fin 10.26
+Dropout30 train(200) acc 0.75 prec 0.49 rec 0.98 (tn,fp,fn,tp)=(103,49,1,47) · val acc 0.49 prec 0.26 rec 0.38 (tn,fp,fn,tp)=(135,117,69,42) · val_loss_fin 7.23
+TEST      SIN reg acc 0.62 prec 0.26 rec 0.33 (tn,fp,fn,tp)=(188,78,54,27) · Drop acc 0.57 prec 0.23 rec 0.37 (tn,fp,fn,tp)=(168,98,51,30)

@@ -1,0 +1,4 @@
+# Barrido Adam · 50 épocas · pos_weight=(yt==0).sum()/yt==1).sum() · semilla 42
+lr=0.005  loss_f(tr/va) 1.031/1.187 · train acc 0.60 prec 0.30 rec 0.50 (tn,fp,fn,tp)=(1420,849,361,359) · val acc 0.51 prec 0.30 rec 0.44 (tn,fp,fn,tp)=(136,116,62,49) · TEST acc 0.61 prec 0.27 rec 0.37 (tn,fp,fn,tp)=(183,83,51,30)
+lr=0.01   loss_f(tr/va) 1.022/1.191 · train acc 0.59 prec 0.31 rec 0.56 (tn,fp,fn,tp)=(1377,892,320,400) · val acc 0.51 prec 0.30 rec 0.46 (tn,fp,fn,tp)=(134,118,60,51) · TEST acc 0.62 prec 0.28 rec 0.42 (tn,fp,fn,tp)=(180,86,47,34)
+lr=0.05   loss_f(tr/va) 1.016/1.207 · train acc 0.56 prec 0.30 rec 0.59 (tn,fp,fn,tp)=(1254,1015,294,426) · val acc 0.51 prec 0.32 rec 0.52 (tn,fp,fn,tp)=(127,125,53,58) · TEST acc 0.58 prec 0.28 rec 0.52 (tn,fp,fn,tp)=(159,107,39,42)
