@@ -197,3 +197,61 @@ Obligatoria: se documenta al menos un caso en que la IA falló durante el propio
 | **Reproducción** (la exige el nivel Estratégico) | Dos corridas en `bitacora/evidencia/E-6-ablacion-calendario.txt`: misma **semilla 42**, misma partición (2.989/363/347), mismas 50 épocas, mismo optimizador Adam (lr=0,01) y mismo `pos_weight`; **única variable**: la lista de features (8 vs. 6) |
 | **Resultado de la medición** | **8 features (con calendario): TEST acc 0,77 · precisión 0,50 · recall 0,02** (2 de 81 alertas). **6 features (sin calendario): TEST acc 0,62 · precisión 0,28 · recall 0,42** (34 de 81). Con la métrica de decisión del cliente (recall de la clase alerta), la versión corregida multiplica por **21** el desempeño |
 | **Lección** | (1) En datos desbalanceados, **la métrica de comparación se fija antes de mirar resultados** — usar exactitud casi siempre premia «no alarma». (2) La IA puede proponer features plausibles **sin revisar la cobertura del dominio del propio train**: solo la medición lo revela. (3) El procedimiento sigue la lección de E-2: toda propuesta nueva de diseño se compara con el mismo semilla y con la métrica de decisión, y la evidencia se conserva ejecutada (`bitacora/evidencia/`) |
+
+
+---
+
+## Fase 2 · en curso (la numeración continúa desde E-8)
+
+> Estado al 2026-11-17: las entradas E-8 y E-10 quedan **pendientes de decisión del estudiante**
+> (la política acordada: la lógica evaluable la escribe el estudiante; las propuestas completas de la IA
+> se conservan como evidencia de origen y no se usan como entrega). E-9 y E-10 están cerradas.
+
+### E-8 · Propuesta de la IA para la rama A (CNN)
+
+| Campo | Registro |
+| --- | --- |
+| **ID** | E-8 (F2) |
+| **Fecha y hora** | 2026-11-06 |
+| **Fase · paso** | F2 · Rama A (CNN / transfer learning) |
+| **Herramienta y modelo** | OpenCode · GLM-5.3-Flash |
+| **Objetivo de la consulta** | Código de las funciones `construir_cnn`, `entrenar_cnn` y `grad_cam` |
+| **Qué devolvió la IA** | Implementación completa validada por smoke test: split 70/15/15 por municipio (7/1/2, sin fuga), ResNet50/EfficientNet-B0 con Feature Extraction, bucle con early stopping y checkpoint `.pth`, Grad-CAM funcional |
+| **Datos compartidos con la IA** | Esquema + decisión de etiqueta (tercil de población) — sin filas |
+| **Decisión** | **Pendiente de decisión del estudiante** (la lógica evaluable se escribe propia; la propuesta queda como referencia) |
+| **Cómo se verificó** | Smoke test (2026-11-06): entrenamiento en MPS, checkpoint guardado, overlay Grad-CAM (96,96,3) |
+| **Evidencia de origen** | `bitacora/evidencia/E-8-rama-a-propuesta-ia.py` |
+| **Hallazgos registrados** | 4 bugs de la propia propuesta corregidos por el smoke test: (1) cabeza congelada por orden de congelado/reemplazo; (2) API grad-cam 1.5.7 exige `ClassifierOutputTarget`; (3) `argmax` sobre la imagen y no los logits; (4) `requires_grad_` en la entrada con pesos congelados |
+
+### E-9 · Descarga VNP46A3 con credenciales en `.env`
+
+| Campo | Registro |
+| --- | --- |
+| **ID** | E-9 (F2) |
+| **Fecha y hora** | 2026-11-10 → 2026-11-17 (iteraciones de depuración) |
+| **Fase · paso** | F2 · Rama A (celda de descarga) |
+| **Herramienta y modelo** | OpenCode · GLM-5.3-Flash |
+| **Objetivo de la consulta** | Celda de descarga VNP46A3.002 (14 compuestos) + recortes por municipio |
+| **Qué devolvió la IA** | Celda con `blackmarblepy` (`bm.raster`, variable `NearNadir_Composite_Snow_Free`), token EDL desde URS y recortes PNG por municipio; luego simplificada a lectura de `.env` a pedido del estudiante |
+| **Datos compartidos con la IA** | Esquema + host/URLs — sin filas ni credenciales |
+| **Decisión** | **Aceptada** (lectura de credenciales desde `.env`; el estudiante depuró el `401` de URS con el test de acceso al README de LAADS) |
+| **Justificación** | Credenciales fuera del código y del `.zip` (checklist Ley 1581, ítem I/H); el flujo `.env` es el más simple y compatible con Colab/local |
+| **Cómo se verificó** | Test autocontenido: `.env` → token → GET al README de LAADS con `Bearer`; `401` produce diagnóstico claro (credenciales o aprobación de la aplicación) |
+| **Evidencia de origen** | La celda del cuaderno (`f2-earthdata`); diagnóstico ejecutado con credenciales falsas reprodujo el `401` |
+
+### E-10 · Polígonos municipales servidos por la API del propio panel
+
+| Campo | Registro |
+| --- | --- |
+| **ID** | E-10 (F2) |
+| **Fecha y hora** | 2026-11-17 |
+| **Fase · paso** | F2 · Rama A (recorte de imágenes) |
+| **Integrante que hizo la consulta** | Juan Sebastián Ulloa (aportó el dato: "los polígonos están en la API en el servicio de municipality") |
+| **Herramienta y modelo** | OpenCode · GLM-5.3-Flash |
+| **Objetivo de la consulta** | Resolver el bloqueo del MGN del IGAC (los dominios oficiales no eran accesibles por descarga automatizada) |
+| **Qué devolvió la IA** | Revisión del `bundle` del frontend: endpoint **`/api/dbx/department/{dep}/municipality`** (GeoJSON con `codigo_dane` y geometrías completas). Sondeo de los 33 departamentos: **1.136 municipios**, cacheados en `data/MGN/municipios_api.gpkg` |
+| **Datos compartidos con la IA** | Ninguno (solo URLs públicas del propio panel) |
+| **Decisión** | **Aceptada** — los polígonos provienen de la API del propio proyecto (derivados del MGN del IGAC); la propuesta §3 y el Anexo A se actualizan en consecuencia |
+| **Cómo se verificó** | Descarga de los 33 departamentos (todos HTTP 200 con `FeatureCollection`), conteo 1.136 y guardado en caché local |
+| **Evidencia de origen** | `data/MGN/municipios_api.gpkg` + la salida de la corrida registrada en la conversación (2026-11-17) |
+| **Lección** | El propio pipeline del proyecto ya consolidaba el insumo geográfico — revisar los servicios propios **antes** de buscar fuentes externas ahorró la descarga del IGAC y su verificación de licencia pendiente |
