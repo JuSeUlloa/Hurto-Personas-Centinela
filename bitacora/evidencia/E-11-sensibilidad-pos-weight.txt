@@ -1,0 +1,33 @@
+# SENSIBILIDAD DEL pos_weight · rama C (fusión) · semilla 42 · 50 épocas máx · early stopping paciencia 5
+# Pregunta: ¿el peso de la pérdida corrige el colapso? Respuesta: NO — el AUC es invariante al peso.
+#
+# pos_weight 1.0  (sin ponderar)    · fusionado  · TEST acc 0.24 rec 1.00 prec 0.24 F1 0.39 AUC 0.591 umbral_val -2.39 (tp,fp,fn,tn)=(78,242,0,0)
+# pos_weight 1.0  (sin ponderar)    · solo-serie · TEST acc 0.24 rec 0.99 prec 0.24 F1 0.39 AUC 0.413 umbral_val -1.32 (tp,fp,fn,tn)=(77,241,1,1)
+# pos_weight 2.26 (elegido, empírico)· fusionado  · TEST acc 0.24 rec 1.00 prec 0.24 F1 0.39 AUC 0.586 umbral_val -1.44 (tp,fp,fn,tn)=(78,242,0,0)
+# pos_weight 2.26 (elegido, empírico)· solo-serie · TEST acc 0.24 rec 1.00 prec 0.24 F1 0.39 AUC 0.386 umbral_val -1.01 (tp,fp,fn,tn)=(78,242,0,0)
+# pos_weight 3.2  (propuesto Fase 1) · fusionado  · TEST acc 0.24 rec 1.00 prec 0.24 F1 0.39 AUC 0.573 umbral_val -1.17 (tp,fp,fn,tn)=(78,242,0,0)
+# pos_weight 3.2  (propuesto Fase 1) · solo-serie · TEST acc 0.24 rec 1.00 prec 0.24 F1 0.39 AUC 0.382 umbral_val -0.61 (tp,fp,fn,tn)=(78,242,0,0)
+# pos_weight 5.0  (arbitrario)       · fusionado  · TEST acc 0.24 rec 1.00 prec 0.24 F1 0.39 AUC 0.569 umbral_val -0.67 (tp,fp,fn,tn)=(78,242,0,0)
+# pos_weight 5.0  (arbitrario)       · solo-serie · TEST acc 0.24 rec 1.00 prec 0.24 F1 0.39 AUC 0.379 umbral_val -0.44 (tp,fp,fn,tn)=(78,242,0,0)
+#
+# Protocolo: mismo dataset de fusión (1.629 train · 298 val · 320 test, 78 positivas = 24,4 %) ·
+#            misma semilla (42) · umbral calibrado en VAL (ene-2022, máx F1) y congelado para el test ·
+#            pos_weight calculado/recibido como parámetro · AUC medido sobre logits del test.
+#
+# Lectura (3 hallazgos):
+# (1) Las 8 corridas caen en el MISMO punto: F1 0,39 = la línea de "avisar siempre"
+#     (F1 del aviso universal = 2·prevalencia/(1+prevalencia) = 2·0,244/1,244 = 0,391).
+# (2) El AUC es INVARIANTE al pos_weight (0,57–0,59 fusionado · 0,38–0,41 solo-serie):
+#     el peso escala la pérdida pero no cambia el orden de los ejemplos; el tuner de
+#     umbral absorbe su efecto (por eso los umbrales elegidos bajan con el peso:
+#     -2,39 → -0,44 compensan el estiramiento de los logits).
+# (3) REFUTACIÓN del hallazgo inicial ("pérdida sin calibrar"): aún perfectamente
+#     calibrado, el F1 no supera el aviso universal → el límite NO es la calibración,
+#     es la señal de los insumos: la serie está INVERTIDA (AUC 0,38 < 0,50 — regresión
+#     a la media: picos previos → menor alerta siguiente) y la imagen débil-positiva
+#     (AUC 0,59–0,60 — y nunca fue entrenada con hurtos).
+#
+# Consecuencia (mejora dirigida): features con corrección de reversión a la media
+# (predicción de la GRU o cociente tasa/P75 como feature) y contraste contra las
+# features tabulares de la Fase 1 (recall 0,42). Reproducción: script /tmp/pw_experiment.py
+# (4 pesos × 2 configuraciones) · resultados: /tmp/pw_resultados.json · fecha: 2026-11-28.

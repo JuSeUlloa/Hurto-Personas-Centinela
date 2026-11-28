@@ -174,31 +174,6 @@ Cada interacción se marca como **Aceptada · Modificada · Rechazada**. La evid
 | **Evidencia de origen** | Conversación de la herramienta (2026-11-03); el error **nocurre en el cuaderno entregado** — el helper final usa `.ravel()` explícito |
 | **Nota de la plantilla (sección 4)** | Es un **error propio que la IA corrigió**: se registra como Aceptada y **no** audita a la IA (regla exclusa de la plantilla) |
 
-## 4. Auditoría a la IA
-
-Obligatoria: se documenta al menos un caso en que la IA falló durante el propio proyecto y cómo se corrigió. Suele ser una de las entradas Modificada o Rechazada de la sección 3, desarrollada a fondo.
-
-**Tipo de auditoría** (se marca una):
-
-- [x] **Real:** la IA produjo el fallo durante el proyecto.
-- [ ] **Inducida y declarada:** la IA no produjo un fallo genuino; se le pidió revisar una parte del propio código y se auditó su respuesta. Llega como máximo al nivel Autónomo del Criterio 5.
-
-### Ficha del caso — features de calendario `sin_mes`/`cos_mes` (E-6)
-
-| Campo | Registro |
-| --- | --- |
-| **Entrada de la bitácora** | E-6 |
-| **Contexto** | En la definición de features de la Fase 1 (cuaderno, celda de carga) se pedía a la IA añadir la estacionalidad del mes con codificación cíclica (`sin_mes`, `cos_mes`), además de las 6 features de rezago, para darle al MLP señal de calendario |
-| **Qué dijo la IA** | Entregó el diseño de **8 features** (6 de rezago + calendario) y su implementación. Tras entrenar, presentó el resultado destacando que la variante con calendario «parece mejor por la exactitud» (0,77 frente a 0,62) |
-| **Evidencia de origen** | `bitacora/evidencia/E-6-ablacion-calendario.txt` — salida literal de las dos corridas (misma semilla 42) |
-| **Por qué estaba mal** | Dos motivos: (1) **fuga de cobertura** — el train solo cubre abr–dic 2021; los arcos `sin/cos` de ene–feb 2022 son valores que la red nunca vio, y la red **extrapola mal**: aprende a «no alarmar» en los meses de prueba. (2) **métrica equivocada en la lectura** — en datos con 77 % de no-alertas, un modelo que nunca alarma alcanza _exactitud_ alta (0,77) con recall de la clase alerta de **0,02**: la comparación por exactitud premiaba lo que el cliente menos quiere |
-| **Cómo se detectó** | La ablación misma: cambiando únicamente las dos features de calendario, el recall de la clase alerta en prueba cayó de **0,42 a 0,02** — una diferencia tan grande muestra que las features «nuevas» rompían el modelo, no lo ayudaban |
-| **Corrección aplicada** | Se retiraron `sin_mes`/`cos_mes`: la clase `MLP` vuelve a `n_entrada=6` y el bloque de features calcula solo rezago. El cuaderno conserva la **celda de ablación** que compara las dos versiones: la corrección no queda como decisión silente, sino ejecutada dentro del propio entregable. Se explica además en el informe (§3.2) |
-| **Reproducción** (la exige el nivel Estratégico) | Dos corridas en `bitacora/evidencia/E-6-ablacion-calendario.txt`: misma **semilla 42**, misma partición (2.989/363/347), mismas 50 épocas, mismo optimizador Adam (lr=0,01) y mismo `pos_weight`; **única variable**: la lista de features (8 vs. 6) |
-| **Resultado de la medición** | **8 features (con calendario): TEST acc 0,77 · precisión 0,50 · recall 0,02** (2 de 81 alertas). **6 features (sin calendario): TEST acc 0,62 · precisión 0,28 · recall 0,42** (34 de 81). Con la métrica de decisión del cliente (recall de la clase alerta), la versión corregida multiplica por **21** el desempeño |
-| **Lección** | (1) En datos desbalanceados, **la métrica de comparación se fija antes de mirar resultados** — usar exactitud casi siempre premia «no alarma». (2) La IA puede proponer features plausibles **sin revisar la cobertura del dominio del propio train**: solo la medición lo revela. (3) El procedimiento sigue la lección de E-2: toda propuesta nueva de diseño se compara con el mismo semilla y con la métrica de decisión, y la evidencia se conserva ejecutada (`bitacora/evidencia/`) |
-
-
 ---
 
 ## Fase 2 · en curso (la numeración continúa desde E-8)
@@ -255,3 +230,65 @@ Obligatoria: se documenta al menos un caso en que la IA falló durante el propio
 | **Cómo se verificó** | Descarga de los 33 departamentos (todos HTTP 200 con `FeatureCollection`), conteo 1.136 y guardado en caché local |
 | **Evidencia de origen** | `data/MGN/municipios_api.gpkg` + la salida de la corrida registrada en la conversación (2026-11-17) |
 | **Lección** | El propio pipeline del proyecto ya consolidaba el insumo geográfico — revisar los servicios propios **antes** de buscar fuentes externas ahorró la descarga del IGAC y su verificación de licencia pendiente |
+
+### E-11 · Rama C: colapso de las cabezas, calibración de la pérdida y experimento de sensibilidad del `pos_weight`
+
+| Campo | Registro |
+| --- | --- |
+| **ID** | E-11 (F2) |
+| **Fecha y hora** | 2026-11-21 (diagnóstico, corrección y experimento) |
+| **Fase · paso** | F2 · Rama C (fusión multimodal + ablación) |
+| **Integrante que hizo la consulta** | Juan Sebastián Ulloa |
+| **Herramienta y modelo** | OpenCode · GLM-5.3-Flash |
+| **Celda o *commit* afectado** | Celda de la rama C definitiva (fusión con embeddings reales + ablación) y nueva celda de sensibilidad (`# E-11`) |
+| **Objetivo de la consulta** | Las tres cabezas de la ablación (solo-imagen / solo-serie / fusionado) colapsaron a la clase mayoritaria (recall de alerta 0,00 con 24,4 % de positivos); el estudiante pidió diagnosticar y corregir |
+| **Indicación (resumen)** | "El sistema, en ese estado, no es desplegable como alertador (nunca avisa) — ¿cómo se puede mitigar?" → "aplica el pos_weight + umbral tunado" → "quiero que agregues el gráfico adicional para representar los pesos" |
+| **Qué devolvió la IA** | Tres entregas: (1) **diagnóstico del colapso** — con 24 % de positivos, la `BCEWithLogitsLoss` sin ponderar hace óptimo responder «tranquilo» siempre (acc 0,76 = proporción de negativos); (2) **dos correcciones aplicadas a la celda** — `pos_weight` calculado empíricamente con train (2,26 = 1.129/500) y umbral calibrado en validación (máx F1, congelado para el test); (3) **experimento de sensibilidad** — 8 corridas (4 pesos: 1,0 · 2,26 · 3,2 · 5,0 × 2 configuraciones), misma semilla 42 |
+| **Datos compartidos con la IA** | Conteos por partición y tasas de positivos (78/320 test · 92/298 val) — sin filas individuales |
+| **Decisión** | **Modificada** — la hipótesis inicial de la propia IA («hallazgo: pérdida sin calibrar») fue **refutada por el experimento** y se reescribió el hallazgo |
+| **Justificación** | El experimento de sensibilidad demostró que el `pos_weight` **no cambia el resultado**: las 8 corridas caen en F1 0,39 (= la línea del aviso universal, 2·0,244/1,244) y el **AUC es invariante al peso** (fusionado 0,57–0,59 · solo-serie 0,38–0,41) — el tuner de umbral absorbe el efecto del peso (los umbrales elegidos compensan: −2,39 → −0,44). Por tanto el límite no es la calibración sino **la señal de los insumos**: el embedding de la serie tiene señal **invertida** en test (AUC 0,38 — regresión a la media: picos previos → menor alerta siguiente) y el visual es débil-positivo (AUC 0,59 — y la CNN nunca fue entrenada con hurtos); en val (298 casos) ninguna cabeza muestra señal (AUC ≈ 0,48) |
+| **Cómo se verificó** | Experimento reproducible con semilla 42 (8 corridas, protocolo idéntico: mismo dataset de fusión 1.629/298/320, umbral calibrado en val y congelado antes del test) + medición AUC sobre logits de val/test en los 3 checkpoints; tabla literal conservada |
+| **Evidencia de origen** | **`bitacora/evidencia/E-11-sensibilidad-pos-weight.txt`** (las 8 corridas) · celda de sensibilidad con gráfico de líneas en el cuaderno (`# E-11`) |
+| **Lección** | (1) La calibración de la pérdida **mueve el punto de operación pero no crea discriminación inexistente** — verificar con métricas inmunes al umbral (AUC) antes de atribuir el fallo a la calibración. (2) El hallazgo redirige la mejora al **insumo**: features con corrección de reversión a la media (predicción de la GRU o cociente tasa/P75) y contraste contra las features tabulares de la Fase 1 (recall 0,42). (3) Un resultado negativo con diagnóstico es el producto más valioso de una ablación — y la rúbrica del criterio 3 lo exige explícitamente |
+
+---
+
+## 4. Auditoría a la IA
+
+Obligatoria: se documenta al menos un caso en que la IA falló durante el propio proyecto y cómo se corrigió. Suele ser una de las entradas Modificada o Rechazada de la sección 3, desarrollada a fondo.
+
+**Tipo de auditoría** (se marca una):
+
+- [x] **Real:** la IA produjo el fallo durante el proyecto.
+- [ ] **Inducida y declarada:** la IA no produjo un fallo genuino; se le pidió revisar una parte del propio código y se auditó su respuesta. Llega como máximo al nivel Autónomo del Criterio 5.
+
+### Ficha del caso — features de calendario `sin_mes`/`cos_mes` (E-6)
+
+| Campo | Registro |
+| --- | --- |
+| **Entrada de la bitácora** | E-6 |
+| **Contexto** | En la definición de features de la Fase 1 (cuaderno, celda de carga) se pedía a la IA añadir la estacionalidad del mes con codificación cíclica (`sin_mes`, `cos_mes`), además de las 6 features de rezago, para darle al MLP señal de calendario |
+| **Qué dijo la IA** | Entregó el diseño de **8 features** (6 de rezago + calendario) y su implementación. Tras entrenar, presentó el resultado destacando que la variante con calendario «parece mejor por la exactitud» (0,77 frente a 0,62) |
+| **Evidencia de origen** | `bitacora/evidencia/E-6-ablacion-calendario.txt` — salida literal de las dos corridas (misma semilla 42) |
+| **Por qué estaba mal** | Dos motivos: (1) **fuga de cobertura** — el train solo cubre abr–dic 2021; los arcos `sin/cos` de ene–feb 2022 son valores que la red nunca vio, y la red **extrapola mal**: aprende a «no alarmar» en los meses de prueba. (2) **métrica equivocada en la lectura** — en datos con 77 % de no-alertas, un modelo que nunca alarma alcanza _exactitud_ alta (0,77) con recall de la clase alerta de **0,02**: la comparación por exactitud premiaba lo que el cliente menos quiere |
+| **Cómo se detectó** | La ablación misma: cambiando únicamente las dos features de calendario, el recall de la clase alerta en prueba cayó de **0,42 a 0,02** — una diferencia tan grande muestra que las features «nuevas» rompían el modelo, no lo ayudaban |
+| **Corrección aplicada** | Se retiraron `sin_mes`/`cos_mes`: la clase `MLP` vuelve a `n_entrada=6` y el bloque de features calcula solo rezago. El cuaderno conserva la **celda de ablación** que compara las dos versiones: la corrección no queda como decisión silente, sino ejecutada dentro del propio entregable. Se explica además en el informe (§3.2) |
+| **Reproducción** (la exige el nivel Estratégico) | Dos corridas en `bitacora/evidencia/E-6-ablacion-calendario.txt`: misma **semilla 42**, misma partición (2.989/363/347), mismas 50 épocas, mismo optimizador Adam (lr=0,01) y mismo `pos_weight`; **única variable**: la lista de features (8 vs. 6) |
+| **Resultado de la medición** | **8 features (con calendario): TEST acc 0,77 · precisión 0,50 · recall 0,02** (2 de 81 alertas). **6 features (sin calendario): TEST acc 0,62 · precisión 0,28 · recall 0,42** (34 de 81). Con la métrica de decisión del cliente (recall de la clase alerta), la versión corregida multiplica por **21** el desempeño |
+| **Lección** | (1) En datos desbalanceados, **la métrica de comparación se fija antes de mirar resultados** — usar exactitud casi siempre premia «no alarma». (2) La IA puede proponer features plausibles **sin revisar la cobertura del dominio del propio train**: solo la medición lo revela. (3) El procedimiento sigue la lección de E-2: toda propuesta nueva de diseño se compara con el mismo semilla y con la métrica de decisión, y la evidencia se conserva ejecutada (`bitacora/evidencia/`) |
+
+### Ficha del caso — hipótesis «pérdida sin calibrar» refutada por el propio experimento (E-11, Fase 2)
+
+| Campo | Registro |
+| --- | --- |
+| **Entrada de la bitácora** | E-11 |
+| **Contexto** | En la rama C (fusión multimodal + ablación), las tres cabezas (solo-imagen / solo-serie / fusionado) colapsaron a la clase mayoritaria: **recall de alerta 0,00** con accuracy 0,76 (la proporción exacta de negativos del test). Se consultó a la IA para diagnosticar y corregir |
+| **Qué dijo la IA** | Primera diagnosis: «el hallazgo es la **pérdida sin calibrar**» — la `BCEWithLogitsLoss` sin ponderar hace óptimo responder «tranquilo» siempre, y la solución es el `pos_weight` (≈ 3,2 validado en la Fase 1). Aplicó dos correcciones: `pos_weight = 2,26` (empírico, solo train) y umbral calibrado en validación (máx F1, congelado para el test) |
+| **Evidencia de origen** | `bitacora/evidencia/E-11-sensibilidad-pos-weight.txt` — las 8 corridas del experimento (misma semilla 42) |
+| **Por qué estaba mal** | El **experimento de sensibilidad** (4 pesos: 1,0 · 2,26 · 3,2 · 5,0 × 2 configuraciones) refutó la hipótesis: las 8 corridas caen en **F1 0,39** — exactamente la línea del aviso universal (2·0,244/1,244) — y el **AUC es invariante al peso** (fusionado 0,57–0,59 · solo-serie 0,38–0,41): el tuner de umbral absorbe el efecto del peso (umbrales de −2,39 a −0,44). Si la calibración fuera el cuello de botella, algún peso habría producido F1 > 0,39; ninguno lo hizo |
+| **Cómo se detectó** | La propia sensibilidad: el diseño experimental controlado (misma semilla, mismo dataset 1.629/298/320, umbral calibrado en val y congelado antes del test) aisló la variable y desmintió la diagnosis inicial |
+| **Corrección aplicada** | Reescritura del hallazgo: el límite **no es la calibración sino la señal de los insumos** — medición con AUC (métrica inmune al umbral): la serie está **invertida** en test (AUC 0,38 — regresión a la media: picos previos → menor alerta siguiente) y la imagen débil-positiva (AUC 0,59–0,60 — entrenada nunca con hurtos); en val (298 casos) ninguna cabeza muestra señal (AUC ≈ 0,48). La mejora se redirige al **insumo**: features con corrección de reversión a la media y contraste contra las features tabulares de la Fase 1 |
+| **Reproducción** (la exige el nivel Estratégico) | 8 corridas en `bitacora/evidencia/E-11-sensibilidad-pos-weight.txt`: misma **semilla 42**, mismo dataset de fusión, mismo protocolo de umbral (calibrado en val, congelado para el test); **única variable**: el `pos_weight` (1,0/2,26/3,2/5,0) — más la medición AUC de val/test sobre los 3 checkpoints |
+| **Resultado de la medición** | F1 **0,39 en las 8 corridas** (invariante) · AUC fusionado 0,569–0,591 · AUC solo-serie 0,379–0,413 (invertido, bajo el azar 0,50) · AUC val ≈ 0,48 en las tres cabezas |
+| **Lección** | (1) La calibración de la pérdida **mueve el punto de operación pero no crea discriminación inexistente**: antes de atribuir un colapso a la calibración, verificar con una métrica inmune al umbral (AUC). (2) Un resultado negativo **con diagnóstico y plan de mejora dirigido** es el producto más valioso de una ablación — y el criterio 3 de la rúbrica lo exige explícitamente («incluso resultados negativos»). (3) La IA puede proponer una diagnosis plausible que el experimento propio refuta: documentar la refutación (no ocultarla) es lo que evidencia criterio |
+
